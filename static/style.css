@@ -1,0 +1,104 @@
+body{
+    font-family: Arial;
+    margin: 0;
+    background: white;
+    color: black;
+}
+
+a {
+    text-decoration: none;
+    color: #000;
+}
+
+h2 {
+    margin-left: 25px;
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 95%;
+    margin: auto;
+    margin-top: 25px;
+}
+
+.site-header { 
+    border-bottom: 2px solid #000;
+    padding: .5em 1em;
+}
+
+.site-header::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+.site-identity {
+    float: left;
+}
+
+.site-identity h1 {
+    font-size: 1.5em;
+    margin: .7em 0 .3em 0;
+    display: inline-block;
+}
+
+.site-identity img {
+    max-width: 55px;
+    float: left;
+    margin: 0 10px 0 0;
+}
+
+.site-navigation {
+    float: right;
+}
+
+.site-navigation ul, li {
+    margin: 0; 
+    padding: 0;
+}
+
+.site-navigation li {
+    display: inline-block;
+    margin: 1.4em 1em 1em 1em;
+}
+
+.button {
+	font: bold 15px Arial;
+	text-decoration: none;
+	background-color: #EEEEEE;
+	color: #333333;
+	padding: 2px 6px 2px 6px;
+	border-top: 1px solid #CCCCCC;
+	border-right: 1px solid #333333;
+	border-bottom: 1px solid #333333;
+	border-left: 1px solid #CCCCCC;
+}
+
+.center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 25px;
+  width: 95%;
+}
+
+.tab {
+    margin-left: 25px;
+}
+
+/* Three image containers (use 25% for four, and 50% for two, etc) */
+.column {
+  float: left;
+  width: 32%;
+  padding-left: 15px;
+}
+
+/* Clear floats after image containers */
+.row::after {
+  content: "";
+  clear: both;
+  display: table;
+}

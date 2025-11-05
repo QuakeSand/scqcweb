@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2> Server Monitor </h2>
+<form class="tab" method="POST">
+        {{ form.csrf_token }}
+        <p>{{ form.sdate2.label }} {{ form.sdate2() }}</p>
+        <p>{{ form.edate2.label }} {{ form.edate2() }}</p>
+        {% for field, errors in form.errors.items() %}
+            <small class="form-text text-muted">
+                {{ ', '.join(errors) }}
+            </small>
+        {% endfor %}
+        {{ form.submit() }}
+</form>
+<p class="tab"> All plot times in UTC </p>
+<hr>
+<img id="plotserver" src="/plot/server" alt="" class="center">   
+{% endblock %}

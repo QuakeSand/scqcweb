@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2> State-of-Health Data </h2>
+<p class="tab"> Select Station and enter number of days to retrieve: </p>
+<form class="tab" method="POST">
+        {{ form.csrf_token }}
+        <p>{{ form.station.label }} {{ form.station() }}</p>
+        <p>{{ form.sta_days.label }} {{ form.sta_days() }}</p>
+        {{ form.submit() }}
+</form>
+<p class="tab"> All plot times in UTC </p>
+<hr>
+<img src="/plot/soh/dcz" alt="" class="center">
+<img src="/plot/soh/dcn" alt="" class="center">
+<img src="/plot/soh/dc2" alt="" class="center">
+<img src="/plot/soh/dce" alt="" class="center">
+<img src="/plot/soh/dc1" alt="" class="center">
+<img src="/plot/soh/rmz" alt="" class="center">
+<img src="/plot/soh/rmn" alt="" class="center">
+<img src="/plot/soh/rm2" alt="" class="center">
+<img src="/plot/soh/rme" alt="" class="center">
+<img src="/plot/soh/rm1" alt="" class="center">
+<img src="/plot/soh/mxz" alt="" class="center">
+<img src="/plot/soh/mxn" alt="" class="center">
+<img src="/plot/soh/mx2" alt="" class="center">
+<img src="/plot/soh/mxe" alt="" class="center">
+<img src="/plot/soh/mx1" alt="" class="center">
+<img src="/plot/soh/cpu" alt="" class="center">
+<img src="/plot/soh/deg" alt="" class="center">
+<img src="/plot/soh/dsk" alt="" class="center">
+<img src="/plot/soh/lcq" alt="" class="center">
+<img src="/plot/soh/vep" alt="" class="center">
+<img src="/plot/soh/vec" alt="" class="center">
+<img src="/plot/soh/vvx" alt="" class="center">
+<img src="/plot/soh/vvb" alt="" class="center">
+<img src="/plot/soh/vsp" alt="" class="center">
+<img src="/plot/soh/vbb" alt="" class="center">
+{% endblock %}

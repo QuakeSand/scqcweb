@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DWR Seismic Network SOH Monitor</title>
+    <link rel="stylesheet" href='../static/style.css'/>
+</head>
+<body>
+    <header class="site-header">
+        <div class="site-identity">
+            <a href="#"><img src="{{ url_for('static', filename='/images/logo.png')}}" alt="Logo" /></a>
+            <h1><a href="#">DWR Seismic Network SOH Monitor</a></h1>
+        </div>  
+        <nav class="site-navigation">
+            <ul>
+                <li><a href="/">Network</a></li>
+                <li><a href="station">Station</a></li>
+                <li><a href="ppsd">PPSD</a></li>
+                <li><a href="heli">Helicorder</a></li>
+                <li><a href="rt">Realtime</a></li>
+                <li><a href="server">Server</a></li>
+            </ul>
+        </nav>
+    </header>
+    {% block content %}{% endblock %}
+    <hr>
+    <p class="tab"> @2025 Developed by DWR Earthquake Engineering</p>
+</body>
+</html>

@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+{% block content %}
+<script>          
+    function updateImage() {
+        const rt_channel = document.getElementById('rt_channel').value;
+        fetch('/plot/rt', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(rt_channel)
+            })
+            .then(response => response.json())
+            .then(data => {
+                const imgElement = document.getElementById('plotrt');
+                imgElement.src = data.image_url; // Update the image source
+            })
+            .catch(error => console.error('Error fetching image:', error));
+    }
+
+    // Update image every 10 seconds
+    setInterval(updateImage, 10000);
+    window.onload = updateImage; // Initial load
+</script>
+<h2> Realtime Data Viewer </h2>
+<form class="tab" method="POST">
+        {{ form.csrf_token }}
+        <p>{{ form.rt_channel.label }} {{ form.rt_channel(id="rt_channel") }}</p>
+        {% for field, errors in form.errors.items() %}
+            <small class="form-text text-muted">
+                {{ ', '.join(errors) }}
+            </small>
+        {% endfor %}
+</form>
+<p class="tab"> All plot times in UTC </p>
+<p class="tab"> Data should update every approx. 10 seconds </p>
+<hr>
+<img id="plotrt" src="" alt="Dynamic Image" class="center">
+{% endblock %}

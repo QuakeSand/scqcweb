@@ -1,0 +1,8 @@
+{% extends "layout.html" %}
+{% block content %}
+<p class="tab"> Last Sensors Reading: {{ updated }} local time ==> <a href="/"class="button">REFRESH</a></p>	
+<hr>
+{% for table in tables %}
+    {{ table|safe }}
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2> PPSD </h2>
+<p class="tab"> Enter station to retrieve: </p>
+<form class="tab" method="POST">
+        {{ form.csrf_token }}
+        <p>{{ form.PPSDstation.label }} {{ form.PPSDstation() }}</p>
+        {{ form.submit() }}
+</form>
+<p class="tab"> All plot times in UTC </p>
+<hr>
+<div class="row">
+    {% for imagelist in imagelist %}
+        <div class="column">
+	    <img src = "{{ url_for('static', filename=imagelist)}}" alt="" style="width:95%">
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
