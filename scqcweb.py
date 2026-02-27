@@ -7,7 +7,7 @@ Need to use with a listener(s)
 @author: nnovoa
 """
 
-import glob
+import configparser
 import io
 import matplotlib.pyplot as plt
 import os
@@ -22,37 +22,50 @@ from flask import Flask, jsonify, make_response, render_template, request, sessi
 from flask_session import Session
 from flask_wtf import FlaskForm
 #from logging.config import dictConfig
-from obspy.clients.filesystem.sds import Client
-from obspy import read_inventory, UTCDateTime
+from obspy.clients.filesystem.sds import Client as SDSClient
+from obspy.clients.fdsn import Client as FDSNClient
+from obspy import UTCDateTime
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.dates import DateFormatter, DayLocator, HourLocator
 from wtforms import DateField, StringField, SelectField, SubmitField, TimeField
 from wtforms.validators import DataRequired, InputRequired, ValidationError
 
+# Read config.ini file and define variables
+config = configparser.ConfigParser()
+config.read('config.ini')
+# Access values from the configuration file
+secret_key = config.get('Flask', 'secret_key')
+SESSION_COOKIE_SECURE = config.getboolean('Flask', 'SESSION_COOKIE_SECURE')
+SESSION_PERMANENT = config.getboolean('Flask', 'SESSION_PERMANENT')
+SESSION_TYPE = config.get('Flask', 'SESSION_TYPE')
+SESSION_FILE_DIR = config.get('Flask', 'SESSION_FILE_DIR')
+source = config.get('Source', 'source_ini')
+if source == 'SDS':
+    SDS_path = os.path.normpath(config.get('Paths', 'path_SDS'))
+    client = SDSClient(SDS_path)
+elif source == 'FDSNWS':
+    FDSNWS = config.get('Paths', 'path_FDSNWS')
+    client = FDSNClient(FDSNWS)
+
 #Create the Flask App
 app = Flask(__name__)
 
 #Set up Secret Key for Session Management
-app.secret_key = "water"
+app.secret_key = secret_key
 
 #Initialize Flask-Session
-app.config['SESSION_COOKIE_SECURE'] = False # uses https or not
-app.config['SESSION_PERMANENT'] = False     # Sessions expire when browser closes
-app.config['SESSION_TYPE'] = "filesystem"     # Store session data on the filesystem
-app.config['SESSION_FILE_DIR'] = "flask_session"
+app.config['SESSION_COOKIE_SECURE'] = SESSION_COOKIE_SECURE
+app.config['SESSION_PERMANENT'] = SESSION_PERMANENT
+app.config['SESSION_TYPE'] = SESSION_TYPE
+app.config['SESSION_FILE_DIR'] = SESSION_FILE_DIR
 Session(app)
 
 # Define global variables
-app_path = os.path.normpath('/opt/scqcweb')
-SDS_path = os.path.normpath('/data/seiscomp/archive')
-# Specify path to StationXMl files (obspy xml reader not currently working with SeisComP XMLs)
-xml_path = os.path.normpath('/opt/seiscomp/StaXML')
+app_path = os.path.dirname(__file__)
+
+# Specify path to listener files
 QC_path = os.path.join(app_path,'listeners', 'QC_dictionary.pkl')
 systemdb_path = os.path.join(app_path, 'listeners', 'system_monitor.db')
-# Use SDS instead of FDSN becuase it is much faster
-client = Client(SDS_path)
-# List of Quality Control headers (needs to match scqc-listener handleMessage)
-QC_headers = ['Latency (s)', 'Delay (s)', 'Timing Quality', 'Gaps Count', 'Overlaps Count', 'Availability (%)']
 
 # Dictionary(Lookup table) for SOH abbreviations
 SOH_desc = {'dcz': 'HNZ DC Offset',
@@ -82,29 +95,8 @@ SOH_desc = {'dcz': 'HNZ DC Offset',
             'vbb': 'Sensor/comms Current'
             }
 
-# Create list of active stations
-def stationcheck():
-    sta_list = []
-    glob_path = xml_path + '/*.xml'
-    for xml_file in glob.iglob(glob_path, recursive=False):
-        inv = read_inventory(xml_file, format="STATIONXML")
-        for net in inv:
-            for sta in net:
-                net_sta = net.code + '.' + sta.code
-                if net_sta not in sta_list:
-                    if sta.end_date is None:
-                        sta_list.append(net_sta)
-    return sta_list
-
-# Create QC dictionary from list of active stations
-def createQCdict():
-    QC_dict = {}
-    ns_list = stationcheck()
-    for ns in ns_list:
-        val = None
-        QC_dict.update({ns:[val,val,val,val,val,val]})
-    with open(QC_path, 'wb') as f:
-        pickle.dump(QC_dict, f)
+# QC Headers must match qc listener
+QC_headers = ['Latency (s)', 'Delay (s)', 'Timing Quality', 'Gaps Count', 'Overlaps Count', 'Availability (%)']
 
 # Get sysmtem monitoring stats from sqlite database
 def read_stats(sdate2, edate2):
@@ -237,30 +229,29 @@ class ServerForm(FlaskForm):
     edate2 = DateField('Specify End Date (UTC):', default=UTCDateTime.now().date, format='%Y-%m-%d', validators=[DataRequired()])
     submit = SubmitField('Submit')
 
-# Create necessary pickle files
-with app.app_context():
-    createQCdict()
-
 # Home page (Network page)
 @app.route('/')
 def index():
-    with open(QC_path, 'rb') as f:
-        QC_dict = pickle.load(f)
-    umtime = os.path.getmtime(QC_path)
-    ultime = datetime.fromtimestamp(umtime).strftime('%Y-%m-%d %H:%M:%S')
-    #app.logger.info(SOH_dict)
-    style_td = dict(selector="td", props=[('font-size', '10pt'),('border-style', 'solid')])
-    style_th = dict(selector="th", props=[('font-size', '12pt'),('border-style', 'solid')])
-    df = pd.DataFrame.from_dict(QC_dict, orient='index', columns=QC_headers)
-    df = df.sort_index(axis = 0)
-    df = df.style.map(cell_color, subset=pd.IndexSlice[:, ['Latency (s)', 'Delay (s)']])\
-		.map(timing_color, subset=pd.IndexSlice[:, ['Timing Quality']])\
-		.map(count_color, subset=pd.IndexSlice[:, ['Gaps Count', 'Overlaps Count']])\
-		.map(availability_color, subset=pd.IndexSlice[:, ['Availability (%)']])\
-		.set_properties(**{'text-align': 'center','border-collapse' : 'collapse'})\
-		.set_table_styles([style_td, style_th])\
-		.format(precision=1)
-    return render_template('network.html', tables=[df.to_html(classes='data', header="true")], updated=ultime)
+    try:
+        with open(QC_path, 'rb') as f:
+            QC_dict = pickle.load(f)
+        umtime = os.path.getmtime(QC_path)
+        ultime = datetime.fromtimestamp(umtime).strftime('%Y-%m-%d %H:%M:%S')
+        #app.logger.info(SOH_dict)
+        style_td = dict(selector="td", props=[('font-size', '10pt'),('border-style', 'solid')])
+        style_th = dict(selector="th", props=[('font-size', '12pt'),('border-style', 'solid')])
+        df = pd.DataFrame.from_dict(QC_dict, orient='index', columns=QC_headers)
+        df = df.sort_index(axis = 0)
+        df = df.style.map(cell_color, subset=pd.IndexSlice[:, ['Latency (s)', 'Delay (s)']])\
+            .map(timing_color, subset=pd.IndexSlice[:, ['Timing Quality']])\
+    		.map(count_color, subset=pd.IndexSlice[:, ['Gaps Count', 'Overlaps Count']])\
+    		.map(availability_color, subset=pd.IndexSlice[:, ['Availability (%)']])\
+    		.set_properties(**{'text-align': 'center','border-collapse' : 'collapse'})\
+    		.set_table_styles([style_td, style_th])\
+    		.format(precision=1)
+        return render_template('network.html', tables=[df.to_html(classes='data', header="true")], updated=ultime)
+    except:
+        return render_template('network.html', tables=[], updated='No QC dictionary found')
 
 # Station page and associated plots
 @app.route('/station', methods=['GET', 'POST'])
@@ -382,7 +373,7 @@ def plot_rt():
     rt_channel = request.get_json()
     if rt_channel is not None:
         now_str = UTCDateTime.now().strftime('%Y-%m-%d %H:%M:%S')
-        subprocess.run(['/opt/seiscomp/seiscomp_6.4.3/bin/scheli', 'capture', '--stream', rt_channel, '-o', '/opt/scqcweb/static/images/rt_temp.png', '--end-time', now_str])
+        subprocess.run(['/opt/seiscomp/seiscomp/bin/scheli', 'capture', '--stream', rt_channel, '-o', '/opt/scqcweb/static/images/rt_temp.png', '--end-time', now_str])
         #Line below should work, but doesn't
         #image_path = url_for('static', filename='/images/rt_temp.png')
         image_path = "static/images/rt_temp.png"

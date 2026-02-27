@@ -1,5 +1,0 @@
-SEISCOMP_ROOT="/opt/seiscomp/seiscomp_6.4.3"
-PATH="/opt/seiscomp/seiscomp_6.4.3/bin:$PATH"
-LD_LIBRARY_PATH="/opt/seiscomp/seiscomp_6.4.3/lib:$LD_LIBRARY_PATH"
-PYTHONPATH="/opt/seiscomp/seiscomp_6.4.3/lib/python:$PYTHONPATH"
-MANPATH="/opt/seiscomp/seiscomp_6.4.3/share/man:$MANPATH"

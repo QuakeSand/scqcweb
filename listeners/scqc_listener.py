@@ -1,46 +1,74 @@
 #!/usr/bin/env seiscomp-python
 # -*- coding: utf-8 -*-
 
-import glob
 import sys
 import traceback
 import pickle
-import csv
 import os
 
-from obspy import read_inventory
 from seiscomp import core, client, datamodel
 
-app_path = os.path.normpath('/opt/scqcweb')
-QC_path = os.path.join(app_path,'listeners', 'QC_dictionary.pkl')
-# Specify path to StationXMl files (obspy xml reader not currently working with SeisComP XMLs)
-xml_path = os.path.join('/opt','seiscomp', 'StaXML')
-# QC_headers is just for reference, must match values in scqcweb
+app_path = os.path.dirname(__file__)
+QC_path = os.path.join(app_path, 'QC_dictionary.pkl')
+# List of QC parameters collected by QCListener in correct order written to QC dictionary
 QC_headers = ['Latency (s)', 'Delay (s)', 'Timing Quality', 'Gaps Count', 'Overlaps Count', 'Availability (%)']
 
-# Create list of active stations
-def stationcheck():
-    sta_list = []
-    glob_path = xml_path + '/*.xml'
-    for xml_file in glob.iglob(glob_path, recursive=False):
-        inv = read_inventory(xml_file, format="STATIONXML")
-        for net in inv:
-            for sta in net:
-                net_sta = net.code + '.' + sta.code
-                if net_sta not in sta_list:
-                    if sta.end_date is None:
-                        sta_list.append(net_sta)
-    return sta_list
+class InventoryReader(client.Application):
+    def __init__(self, argc, argv):
+        super().__init__(argc, argv)
+        self.setDaemonEnabled(False)
+        self.setMessagingEnabled(False)
+        self.setDatabaseEnabled(True, True)
+        self.setLoadStationsEnabled(True)
+        self.setLoggingToStdErr(True)
+    
+    def validateParameters(self):
+        if not super().validateParameters():
+            return False
 
-# Create QC dictionary from list of active stations
-def createQCdict():
-    QC_dict = {}
-    ns_list = stationcheck()
-    for ns in ns_list:
-        val = None
-        QC_dict.update({ns:[val,val,val,val,val,val]})
-    with open(QC_path, 'wb') as f:
-        pickle.dump(QC_dict, f)
+        # no database is needed when inventory is provided by an SCML file
+        if not self.isInventoryDatabaseEnabled():
+            self.setDatabaseEnabled(False, False)
+
+        return True
+    
+    def run(self):
+        now = core.Time.UTC()
+        inv = client.Inventory.Instance().inventory()
+
+        sta_list = []
+        
+        nnet = inv.networkCount()
+        for inet in range(nnet):
+            network = inv.network(inet)
+            for ista in range(network.stationCount()):
+                station = network.station(ista)
+                try:
+                    start = station.start()
+                except Exception:
+                    continue
+
+                try:
+                    end = station.end()
+                    if not start <= now <= end:
+                        continue
+                except Exception:
+                    pass
+                
+                net_sta = network.code() + '.' + station.code()
+                if net_sta not in sta_list:
+                    sta_list.append(net_sta)
+        QC_dict = {}
+        for ns in sta_list:
+            val = None
+            QC_dict.update({ns:[val,val,val,val,val,val]})
+        with open(QC_path, 'wb') as f:
+            pickle.dump(QC_dict, f)
+            
+        return True
+    
+    def done(self):
+        client.Application.done(self)
 
 class QCListener(client.Application):
     def __init__(self, argc, argv):
@@ -117,7 +145,9 @@ class QCListener(client.Application):
                 sys.stderr.write(i)
 
 def main():
-    createQCdict()
+    qc_dict = InventoryReader(len(sys.argv), sys.argv)
+    qc_dict()
+    del qc_dict
     app = QCListener(len(sys.argv), sys.argv)
     return app()
 
