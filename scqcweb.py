@@ -203,6 +203,21 @@ def count_color(val):
 		count_color = '#F97979'
 	return 'background-color: %s' % count_color
 
+def format_time(val):
+    if val >= 86400:
+        t_val = round(val / 86400, 1)
+        t_str = str(t_val) + ' days'
+    elif val >= 3600:
+        t_val = round(val / 3600, 1)
+        t_str = str(t_val) + ' hours'
+    elif val >= 60:
+        t_val = round(val / 60, 1)
+        t_str = str(t_val) + ' mins'
+    else:
+        t_str = str(round(val,1))
+    return f"{t_str}"
+
+
 # Create forms to use for various web pages
 class StationForm(FlaskForm):
     station = SelectField('Station', validators=[InputRequired()])
@@ -248,7 +263,7 @@ def index():
     		.map(availability_color, subset=pd.IndexSlice[:, ['Availability (%)']])\
     		.set_properties(**{'text-align': 'center','border-collapse' : 'collapse'})\
     		.set_table_styles([style_td, style_th])\
-    		.format(precision=1)
+    		.format({'Latency (s)': format_time, 'Delay (s)': format_time}, precision=1, na_rep='Missing')
         return render_template('network.html', tables=[df.to_html(classes='data', header="true")], updated=ultime)
     except:
         return render_template('network.html', tables=[], updated='No QC dictionary found')
@@ -346,7 +361,8 @@ def plot_heli():
         nslc_id = heli_channel.split(".")
         st = client.get_waveforms(nslc_id[0], nslc_id[1], nslc_id[2], nslc_id[3], sdt, edt)
         if len(st) > 0:
-            fig = st.plot(type="dayplot", interval=60, right_vertical_labels=False, vertical_scaling_range=5e3, one_tick_per_line=True, show_y_UTC_label=False)
+            fig = plt.figure(figsize=(8.5,11), dpi=300)
+            st.plot(fig=fig, type="dayplot", interval=60, right_vertical_labels=False, vertical_scaling_range=0, one_tick_per_line=True, show_y_UTC_label=False)
             response = fig2resp(fig)
             return response
         else:
@@ -373,7 +389,7 @@ def plot_rt():
     rt_channel = request.get_json()
     if rt_channel is not None:
         now_str = UTCDateTime.now().strftime('%Y-%m-%d %H:%M:%S')
-        subprocess.run(['/opt/seiscomp/seiscomp/bin/scheli', 'capture', '--stream', rt_channel, '-o', '/opt/scqcweb/static/images/rt_temp.png', '--end-time', now_str])
+        subprocess.run(['/opt/seiscomp/seiscomp/bin/seiscomp', 'exec', 'scheli', 'capture', '--stream', rt_channel, '-o', '/opt/scqcweb/static/images/rt_temp.png', '--end-time', now_str])
         #Line below should work, but doesn't
         #image_path = url_for('static', filename='/images/rt_temp.png')
         image_path = "static/images/rt_temp.png"
